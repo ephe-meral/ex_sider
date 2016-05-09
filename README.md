@@ -104,18 +104,18 @@ for x <- data, into: redis_set, do: x
 
 # and any kind of Enum operation, e.g.:
 Enum.to_list(redis_set)
-
-# => ["surprisingly", :we_can_store, "all kinds of data!!!", 1, 1, 1]
+# => ["surprisingly", :we_can_store, "all kinds of data!!!", 1]
+# note the missing 1's because we are using a RedisSet
 ```
 
 ## remarks
 
 **Mutability** - All datastructures implemented here are mutable, that means, that every operation that changes any part of them (i.e. writes data) will change for all parts of the application that have a reference to this datastructure. This is because we actually only implement a thin adapter layer based on Elixir Protocols, that interface with redis in order to store data.
 
-**Binary Data** - Any data will, by default, be stored as an erlang term that is being converted to binary beforehand. That means that you will have to call `:erlang.binary_to_term` on anything that you retrieve from redis by hand. If that is not an option for you, simply disable binary mode when initialising the datastructure.
+**Binary Data** - Any data will, by default, be stored as an erlang term that is being converted to binary beforehand. That means that - in case you access Redis without `ex_sider` - that you will have to call `:erlang.binary_to_term` on anything that you retrieve from it. If that is not an option for you, simply disable binary mode when initialising the datastructure:
 
 ```elixir
-# to disable binary mode, in which case only some parameters can be used (those that are binaries)
+# to disable binary mode (only values that are binaries can be used then, like e.g. elixir strings)
 redis_set = RedisSet.new("my-set-name", binary_mode: false)
 ```
 

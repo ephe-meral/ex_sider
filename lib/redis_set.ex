@@ -60,6 +60,7 @@ defimpl Collectable, for: RedisSet do
       list, {:cont, x} when binary -> [:erlang.term_to_binary(x) | list]
       list, {:cont, x}             -> [x | list]
       list, :done ->
+        list = Enum.uniq(list)
         case adapter.command(["SADD", key] ++ list) do
           {:ok, x} when x == length(list) -> original
           other ->
