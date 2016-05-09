@@ -1,6 +1,8 @@
+[![Build Status](https://travis-ci.org/ephe-meral/ex_sider.svg?branch=master)](https://travis-ci.org/ephe-meral/ex_sider)
+
 # ex_sider
 
-Elixir &lt;-> Redis adapter
+Elixir &lt;-> Redis datastructure adapter
 
 ## setup
 
@@ -115,6 +117,9 @@ Enum.to_list(redis_set)
 ```elixir
 # to disable binary mode, in which case only some parameters can be used (those that are binaries)
 redis_set = RedisSet.new("my-set-name", binary_mode: false)
+```
+
+**This Project** - This project is supposed to be a helper to make interfacing with Redis simpler. It is by no means: complete, perfectly documented or otherwise done. Any help is appreciated, just fork & PR, create issues etc. Business as usual.
 
 ## is it any good?
 
