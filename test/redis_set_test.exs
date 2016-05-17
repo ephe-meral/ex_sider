@@ -1,15 +1,6 @@
 defmodule RedisSetTest do
   use ExUnit.Case, async: true
 
-  setup_all do
-    {:ok, _} = ExSider.RedixPool.command(["FLUSHDB"])
-    on_exit fn ->
-      {:ok, _} = ExSider.RedixPool.command(["FLUSHDB"])
-    end
-
-    :ok
-  end
-
   setup context do
     redis_set = RedisSet.new(context[:test] |> to_string)
     {:ok, redis_set: redis_set}

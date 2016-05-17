@@ -90,6 +90,7 @@ end
 ```
 
 Finally, after this setup, we can use the `ex_redis` modules like any normal Map, Set or List, e.g.:
+(Actually, take this with a grain of salt: Since this is an ongoing effort, interfaces might be incomplete - but please request specific improvements or contribute!)
 
 ```elixir
 redis_set = RedisSet.new("my-set-name")

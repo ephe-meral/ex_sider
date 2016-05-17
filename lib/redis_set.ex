@@ -1,4 +1,8 @@
 defmodule RedisSet do
+  @moduledoc """
+  Implements `Enumerable` and `Collectable` - meaning
+  this can be used with Elixir's `Enum` w/o limitations
+  """
   alias RedisSet
 
   defstruct __redis_key__: nil, __redis_adapter__: nil, __binary_mode__: true
