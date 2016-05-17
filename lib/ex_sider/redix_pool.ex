@@ -1,7 +1,6 @@
+# Taken from the Redix samples in their README.md
 defmodule ExSider.RedixPool do
-  @moduledoc """
-  Taken from the Redix samples in their README.md
-  """
+  @moduledoc false
   use Supervisor
 
   def load_opts do

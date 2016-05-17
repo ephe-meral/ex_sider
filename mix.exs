@@ -3,12 +3,14 @@ defmodule ExSider.Mixfile do
 
   def project do
     [app: :ex_sider,
-     version: "0.1.0",
+     version: "0.0.1",
      elixir: "~> 1.2",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      test_coverage: [tool: Coverex.Task],
-     deps: deps]
+     deps: deps,
+     description: "Enables Elixir-Map/List/Set-APIs for Redis datastructures.",
+     package: package]
   end
 
   def application do
@@ -17,8 +19,14 @@ defmodule ExSider.Mixfile do
   end
 
   defp deps do
-    [{:poolboy, "~> 1.5"},
-     {:redix, ">= 0.0.0"},
+    [{:poolboy, "~> 1.5", only: [:dev, :test]},
+     {:redix, ">= 0.0.0", only: [:dev, :test]},
      {:coverex, "~> 1.4", only: :test}]
+  end
+
+  defp package do
+    [maintainers: ["Johanna Appel"],
+     licenses: ["WTFPL"],
+     links: %{"GitHub" => "https://github.com/ephe-meral/ex_sider"}]
   end
 end
