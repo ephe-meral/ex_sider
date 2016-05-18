@@ -10,7 +10,7 @@ In your `mix.exs` file:
 
 ```elixir
 def deps do
-  [{:ex_sider, github: "ephe-meral/ex_sider"},
+  [{:ex_sider, "~> 0.0.1"},
    # the following is only needed if using a Redix pool:
    {:poolboy, "~> 1.5"},
    {:redix, ">= 0.0.0"}]
