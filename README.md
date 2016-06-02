@@ -1,4 +1,7 @@
 [![Build Status](https://travis-ci.org/ephe-meral/ex_sider.svg?branch=master)](https://travis-ci.org/ephe-meral/ex_sider)
+[![Hex.pm](https://img.shields.io/hexpm/l/ex_sider.svg "WTFPL Licensed")](https://github.com/ephe-meral/ex_sider/blob/master/LICENSE)
+[![Hex version](https://img.shields.io/hexpm/v/ex_sider.svg "Hex version")](https://hex.pm/packages/ex_sider)
+
 
 # ex_sider
 
@@ -10,7 +13,7 @@ In your `mix.exs` file:
 
 ```elixir
 def deps do
-  [{:ex_sider, "~> 0.0.1"},
+  [{:ex_sider, "~> 0.1.0"},
    # the following is only needed if using a Redix pool:
    {:poolboy, "~> 1.5"},
    {:redix, ">= 0.0.0"}]
