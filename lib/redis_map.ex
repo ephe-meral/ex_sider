@@ -19,6 +19,11 @@ defmodule RedisMap do
       __binary_mode__: binary_mode}
   end
 
+  @doc "Standard delete/2, uses drop/2 under the hood"
+  def delete(%RedisMap{} = container, key), do: drop(container, [key])
+
+  @doc "Drops several keys and their associated values at once. Used by get_and_update"
+  def drop(%RedisMap{} = container, []), do: container
   def drop(%RedisMap{} = container, [_ | _] = keys) do
     string_keys = for key <- keys, is_binary(key) or is_atom(key), do: to_string(key)
     drop_internal(container, keys, string_keys)
@@ -33,9 +38,10 @@ defmodule RedisMap do
         container
     end
   end
+  defp drop_internal(%RedisMap{}, keys, _), do: raise ArgumentError, message: "invalid RedisMap keys, need to be List of String or Atom: #{inspect keys}"
+  defp drop_internal(container, _keys, _),  do: raise ArgumentError, message: "invalid container, needs to be a RedisMap: #{inspect container}"
 
-  def drop_internal(_container, keys), do: raise ArgumentError, message: "invalid RedisMap keys, need to be List of String or Atom: #{inspect keys}"
-
+  @doc "Access implementation"
   def fetch(%RedisMap{__redis_adapter__: adapter, __binary_mode__: binary}, key)
   when is_binary(key) or is_atom(key) do
     case adapter.command(["GET", to_string(key)]) do
@@ -47,9 +53,14 @@ defmodule RedisMap do
         :error
     end
   end
+  def fetch(%RedisMap{}, key), do: raise ArgumentError, message: "invalid RedisMap key, needs to be String or Atom: #{inspect key}"
+  def fetch(container, _key),  do: raise ArgumentError, message: "invalid container, needs to be a RedisMap: #{inspect container}"
 
-  def fetch(_container, key), do: raise ArgumentError, message: "invalid RedisMap key, needs to be String or Atom: #{inspect key}"
+  @doc "Delegates to Access"
+  defdelegate get(container, key),          to: Access
+  defdelegate get(container, key, default), to: Access
 
+  @doc "Access implementation"
   def get_and_update(%RedisMap{} = container, key, fun) do
     current =
       case fetch(container, key) do
@@ -69,6 +80,32 @@ defmodule RedisMap do
         raise BadFunctionError, message: "invalid return type in RedisMap get_and_update/3, allowed is tuple and :pop, go: #{inspect other}"
     end
   end
+
+  @doc "Standard put/3, based on Access implementation of put_in/2"
+  def put(%RedisMap{} = container, key, value), do: put_in(container[key], value)
+
+  def take(%RedisMap{} = container, [_ | _] = keys) do
+    string_keys = for key <- keys, is_binary(key) or is_atom(key), do: to_string(key)
+    take_internal(container, keys, string_keys)
+  end
+
+  defp take_internal(%RedisMap{__redis_adapter__: adapter, __binary_mode__: binary} = container, original_keys, string_keys)
+  when length(original_keys) == length(string_keys) do
+    case adapter.command(["MGET" | string_keys]) do
+      {:ok, nil}  -> %{}
+      {:ok, vals} ->
+        vals =
+          if binary, do: vals |> Enum.map(&:erlang.binary_to_term/1),
+                   else: vals
+        Enum.zip(string_keys, vals) |> Enum.into(%{})
+      other                   ->
+        Logger.error "RedisMap failed to call take/2, got Redis reply: #{inspect other}"
+        %{}
+    end
+  end
+  defp take_internal(%RedisMap{}, keys, _), do: raise ArgumentError, message: "invalid RedisMap keys, need to be List of String or Atom: #{inspect keys}"
+  defp take_internal(container, _keys, _),  do: raise ArgumentError, message: "invalid container, needs to be a RedisMap: #{inspect container}"
+
 end
 
 defimpl Collectable, for: RedisMap do

@@ -9,7 +9,7 @@ defmodule ExSider.Mixfile do
      start_permanent: Mix.env == :prod,
      test_coverage: [tool: Coverex.Task],
      deps: deps,
-     description: "Enables Elixir-Map/List/Set-APIs for Redis datastructures.",
+     description: "Elixir Map/List/Set interfaces for Redis datastructures.",
      package: package]
   end
 

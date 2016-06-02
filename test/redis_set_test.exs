@@ -20,11 +20,23 @@ defmodule RedisSetTest do
 
   test "handle the same values gracefully", %{redis_set: rset} do
     data = ["surprisingly", :we_can_store, "all kinds of data!!!", 1, 1, 1]
+    dedup_data = Enum.uniq(data)
 
     for x <- data, into: rset, do: x
+    # we should be able to do it multiple times w/o crashes
+    for x <- data, into: rset, do: x
 
-    assert similar(Enum.to_list(rset),
-      ["surprisingly", :we_can_store, "all kinds of data!!!", 1])
+    assert similar(Enum.to_list(rset), dedup_data)
+  end
+
+  test "delete members", %{redis_set: rset} do
+    data = ["surprisingly", :we_can_store, "all kinds of data!!!", 1, 1, 1]
+    changed_dedup_data = [:we_can_store, "all kinds of data!!!", 1]
+
+    for x <- data, into: rset, do: x
+    RedisSet.delete(rset, "surprisingly")
+
+    assert similar(Enum.to_list(rset), changed_dedup_data)
   end
 
   # Helpers

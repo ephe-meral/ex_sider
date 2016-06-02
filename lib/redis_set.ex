@@ -3,9 +3,22 @@ defmodule RedisSet do
   Implements `Enumerable` and `Collectable` - meaning
   this can be used with Elixir's `Enum` w/o limitations
   """
+  require Logger
   alias RedisSet
 
   defstruct __redis_key__: nil, __redis_adapter__: nil, __binary_mode__: true
+
+  def delete(%RedisSet{__redis_key__: key, __redis_adapter__: adapter, __binary_mode__: binary} = container, member) do
+    member =
+      if binary, do: :erlang.term_to_binary(member),
+               else: member
+    case adapter.command(["SREM", key, member]) do
+      {:ok, x} when is_number(x) -> container
+      other ->
+        Logger.error "RedisSet failed to call delete/2, got Redis reply: #{inspect other}"
+        container
+    end
+  end
 
   def new(redis_key, opts \\ []) when is_binary(redis_key) do
     binary_mode = opts[:binary_mode] || true
@@ -64,9 +77,8 @@ defimpl Collectable, for: RedisSet do
       list, {:cont, x} when binary -> [:erlang.term_to_binary(x) | list]
       list, {:cont, x}             -> [x | list]
       list, :done ->
-        list = Enum.uniq(list)
         case adapter.command(["SADD", key] ++ list) do
-          {:ok, x} when x == length(list) -> original
+          {:ok, x} when is_number(x) -> original
           other ->
             Logger.error("RedisSet failed to call into/1, got Redis reply: #{inspect other}")
             original

@@ -37,6 +37,15 @@ defmodule RedisMapTest do
     for x <- 6..10, do: assert RedisMap.fetch(rmap, "#{context[:test]}:#{x}") == {:ok, x}
   end
 
+  test "put/3, get/2 and delete/2", %{redis_map: rmap} = context do
+    key = context[:test]
+    value = System.unique_integer
+    RedisMap.put(rmap, key, value)
+    assert RedisMap.get(rmap, key) == value
+    RedisMap.delete(rmap, key)
+    refute RedisMap.get(rmap, key)
+  end
+
   test "access proto", %{redis_map: rmap} = context do
     key = context[:test]
     assert rmap[key] == nil
@@ -44,5 +53,21 @@ defmodule RedisMapTest do
     assert rmap[key][:a] == 1
     assert rmap[key][:b] == 2
     assert rmap[key][:c] == nil
+  end
+
+  test "take/2", %{redis_map: rmap} = context do
+    for x <- 1..100, into: rmap, do: {"#{context[:test]}:#{x}", "val#{x}"}
+    map = RedisMap.take(rmap, 1..100 |> Enum.map(&("#{context[:test]}:#{&1}")))
+    vals = Map.values(map)
+    assert similar(1..100 |> Enum.map(&("val#{&1}")), vals)
+  end
+
+  # Helpers
+
+  def similar([_ | _] = list_a, [_ | _] = list_b)
+  when length(list_a) != length(list_b), do: false
+
+  def similar([_ | _] = list_a, [_ | _] = list_b) do
+    list_a |> Enum.all?(fn x -> list_b |> Enum.member?(x) end)
   end
 end
