@@ -29,7 +29,7 @@ config ex_sider,
 # also make sure to configure the redis adapter correctly
 ```
 
-## use case
+## use case: redis interface
 
 This can be used (potentially, if necessary) with different Redis adapters, but for
 now I'll stick with [Redix](https://github.com/whatyouhide/redix). From the example
@@ -110,6 +110,19 @@ for x <- data, into: redis_set, do: x
 Enum.to_list(redis_set)
 # => ["surprisingly", :we_can_store, "all kinds of data!!!", 1]
 # note the missing 1's because we are using a RedisSet
+```
+
+## use case: simple local & redis cache
+
+This structure can be used to remotely cache elixir maps with simple push/pull sync semantics and no strategy for conflict resolution. The use case for this is to store (also Erlang-Node independant) the state of a process that will only ever be existing once in the cluster, but might be restarted often.
+
+```elixir
+redis_hash = RedisHash.new("my-hash-name") # pulls the existing state from the repo automatically if any
+redis_hash = RedisHash.merge(redis_hash, %{"some" => :values, "that_i_want" => "to store"}) # does a local caching
+redis_hash = RedisHash.push(redis_hash) # pushes the local changes
+
+RedisHash.unpushed_changes?(redis_hash)
+# => false
 ```
 
 ## remarks

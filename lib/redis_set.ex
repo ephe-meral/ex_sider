@@ -20,7 +20,9 @@ defmodule RedisSet do
     end
   end
 
-  def new(redis_key, opts \\ []) when is_binary(redis_key) do
+  def new(redis_key), do: new(redis_key, [])
+  def new(redis_key, opts) when is_atom(redis_key), do: new(redis_key |> to_string, opts)
+  def new(redis_key, opts) when is_binary(redis_key) do
     binary_mode = opts[:binary_mode] || true
     adapter = Application.get_env(:ex_sider, :redis_adapter)
     %RedisSet{
