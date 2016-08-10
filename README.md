@@ -1,6 +1,7 @@
 [![Build Status](https://travis-ci.org/ephe-meral/ex_sider.svg?branch=master)](https://travis-ci.org/ephe-meral/ex_sider)
 [![Hex.pm](https://img.shields.io/hexpm/l/ex_sider.svg "WTFPL Licensed")](https://github.com/ephe-meral/ex_sider/blob/master/LICENSE)
 [![Hex version](https://img.shields.io/hexpm/v/ex_sider.svg "Hex version")](https://hex.pm/packages/ex_sider)
+[![Documentation](https://img.shields.io/badge/docs-hexpm-blue.svg)](http://hexdocs.pm/ex_sider/)
 
 
 # ex_sider
