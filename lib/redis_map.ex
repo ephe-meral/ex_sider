@@ -81,6 +81,9 @@ defmodule RedisMap do
     end
   end
 
+  @doc "Access implementation"
+  def pop(%RedisMap{} = container, key), do: get_and_update(container, key, fn _ -> :pop end)
+
   @doc "Standard put/3, based on Access implementation of put_in/2"
   def put(%RedisMap{} = container, key, value), do: put_in(container[key], value)
 
@@ -89,7 +92,7 @@ defmodule RedisMap do
     take_internal(container, keys, string_keys)
   end
 
-  defp take_internal(%RedisMap{__redis_adapter__: adapter, __binary_mode__: binary} = container, original_keys, string_keys)
+  defp take_internal(%RedisMap{__redis_adapter__: adapter, __binary_mode__: binary}, original_keys, string_keys)
   when length(original_keys) == length(string_keys) do
     case adapter.command(["MGET" | string_keys]) do
       {:ok, nil}  -> %{}

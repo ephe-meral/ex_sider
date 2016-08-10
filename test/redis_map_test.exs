@@ -55,6 +55,13 @@ defmodule RedisMapTest do
     assert rmap[key][:c] == nil
   end
 
+  test "pop/2", %{redis_map: rmap} = context do
+    key = context[:test]
+    value = System.unique_integer
+    RedisMap.put(rmap, key, value)
+    assert {^value, ^rmap} = RedisMap.pop(rmap, key)
+  end
+
   test "take/2", %{redis_map: rmap} = context do
     for x <- 1..100, into: rmap, do: {"#{context[:test]}:#{x}", "val#{x}"}
     map = RedisMap.take(rmap, 1..100 |> Enum.map(&("#{context[:test]}:#{&1}")))

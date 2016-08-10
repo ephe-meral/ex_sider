@@ -3,7 +3,7 @@ defmodule ExSider.Mixfile do
 
   def project do
     [app: :ex_sider,
-     version: "0.1.1",
+     version: "0.1.2",
      elixir: "~> 1.2",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -21,7 +21,8 @@ defmodule ExSider.Mixfile do
   defp deps do
     [{:poolboy, "~> 1.5", only: [:dev, :test]},
      {:redix, ">= 0.0.0", only: [:dev, :test]},
-     {:coverex, "~> 1.4", only: :test}]
+     {:coverex, "~> 1.4", only: :test},
+     {:ex_doc, ">= 0.0.0", only: :dev}]
   end
 
   defp package do
