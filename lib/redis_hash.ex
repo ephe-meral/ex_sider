@@ -3,7 +3,7 @@ defmodule RedisHash do
   Currently only works by merging/replacing with maps and then pull/push-ing.
 
   In the future, this should implement `Access`, `Enumerable` and `Collectable` - meaning
-  this can be used with Elixir's `Enum` w/o limitations. These should work
+  this could then be used with Elixir's `Enum` w/o limitations. These should work
   independant of whether or not local caching is used.
 
   You can let this cache its values locally and commit them back to the repo
@@ -12,6 +12,24 @@ defmodule RedisHash do
   In case a process gets restarted etc. it can quickly commit and
   refetch its state later on. Obviously gets tricky if multiple processes
   use the same redis-hash.
+
+  Conflicts and race conditions are tried to be avoided, but essentially this
+  is a very simplistic grow-only set. (You can delete the whole thing, but not
+  single entries for now)
+
+  ### Local caching
+
+  Local caching will fetch the state of the hash when it is created, and will
+  try to keep it up to date with the external version whenever you do pulls and
+  pushes to redis.
+
+  This can be disabled by using:
+
+      RedisHash.new("my-key", local_cache: false)
+
+  When local caching is disabled, every merge etc. automatically leads
+  to a push to redis. In order to get the state from redis then, you'll need
+  manually pull and dump.
   """
   require Logger
   alias RedisHash
@@ -22,7 +40,7 @@ defmodule RedisHash do
     __binary_mode__: true,
     __local_cache_enabled__: true,
     __local_cache__: %{},
-    __local_changes__: false)
+    __local_changes__: %{})
 
   @doc """
   If local caching is enabled, this will checkout the initial cache state from
@@ -69,7 +87,8 @@ defmodule RedisHash do
   def merge(%RedisHash{__local_cache_enabled__: true, __local_cache__: cache, __local_changes__: changes} = container, %{} = other_map) do
     other_map = ensure_keys_are_string(other_map)
     new_cache = cache |> Map.merge(other_map)
-    %RedisHash{container | __local_cache__: new_cache, __local_changes__: (changes or (cache != new_cache))}
+    new_changes = changes |> Map.merge(map_diff(cache, new_cache))
+    %RedisHash{container | __local_cache__: new_cache, __local_changes__: new_changes}
   end
   def merge(%RedisHash{__local_cache_enabled__: false} = container, %{} = other_map) do
     other_map = ensure_keys_are_string(other_map)
@@ -82,7 +101,7 @@ defmodule RedisHash do
   """
   def clear(%RedisHash{__redis_key__: key, __redis_adapter__: adapter} = container) do
     case adapter.command(["DEL", key]) do
-      {:ok, x} when is_number(x) -> %RedisHash{container | __local_cache__: %{}, __local_changes__: false}
+      {:ok, x} when is_number(x) -> %RedisHash{container | __local_cache__: %{}, __local_changes__: %{}}
       other ->
         Logger.error "RedisHash failed to call delete/1, got Redis reply: #{inspect other}"
         container
@@ -93,14 +112,15 @@ defmodule RedisHash do
   Pulls all fields of this hash from Redis and merges it with the current local cache if any.
   This doesn't change the local-cache state of the RedisHash.
   """
-  def pull(%RedisHash{__redis_key__: key, __redis_adapter__: adapter, __binary_mode__: binary, __local_cache__: cache} = container) do
+  def pull(%RedisHash{__redis_key__: key, __redis_adapter__: adapter, __binary_mode__: binary, __local_cache__: cache, __local_changes__: changes} = container) do
     case adapter.command(["HGETALL", key]) do
       {:ok, nil} -> container
       {:ok, []}  -> container
       {:ok, fields} when is_list(fields) ->
         local_count = Enum.count(cache)
-        local_cache = extract_map(fields, cache, binary)
-        %RedisHash{container | __local_cache__: local_cache, __local_changes__: (Enum.count(local_cache) > local_count)}
+        new_cache = extract_map(fields, cache, binary)
+        new_changes = changes |> Map.merge(map_diff(cache, new_cache))
+        %RedisHash{container | __local_cache__: new_cache, __local_changes__: new_changes}
       other ->
         Logger.error("RedisHash failed to call pull/1, got Redis reply: #{inspect other}")
         container
@@ -111,16 +131,17 @@ defmodule RedisHash do
   Push all local keys/values back to the Redis repo.
   This simply overwrites whatever is already in there.
   """
-  def push(%RedisHash{__redis_key__: key, __redis_adapter__: adapter, __binary_mode__: binary, __local_cache__: cache} = container) do
-    fields = cache |> Enum.reduce([], fn
+  def push(%RedisHash{__redis_key__: key, __redis_adapter__: adapter, __binary_mode__: binary, __local_changes__: changes} = container) do
+    fields = changes |> Enum.reduce([], fn
       {key, value}, acc when binary -> [key, :erlang.term_to_binary(value) | acc]
       {key, value}, acc             -> [key, value | acc]
     end)
     case adapter.command(["HMSET", key | fields]) do
       {:ok, "OK"} ->
-        %RedisHash{container | __local_changes__: false}
+        %RedisHash{container | __local_changes__: %{}}
+        |> pull
       other ->
-        Logger.error("RedisHash failed to call pull/1, got Redis reply: #{inspect other}")
+        Logger.error("RedisHash failed to call push/1, got Redis reply: #{inspect other}")
         container
     end
   end
@@ -128,7 +149,7 @@ defmodule RedisHash do
   @doc """
   Check if we have local unpushed changes.
   """
-  def unpushed_changes?(%RedisHash{__local_changes__: changes}), do: changes
+  def unpushed_changes?(%RedisHash{__local_changes__: changes}), do: not Enum.empty?(changes)
 
   defp extract_map([], acc, _binary_mode),             do: acc
   defp extract_map([key, value | fields], acc, true),  do: extract_map(fields, acc |> Map.put(key, :erlang.binary_to_term(value)), true)
@@ -150,5 +171,16 @@ defmodule RedisHash do
     do: raise "For maps to work with RedisHash, their keys must be strings or atoms, and they will always be cast to string."
 
     map
+  end
+
+  # Shallow diff of 2 maps (shallow b/c redis only supports one level of sub-keys anyway)
+  # Result is what is changed and new in map2
+  defp map_diff(map1, map2) do
+    map2 |> Enum.reduce(%{}, fn {key, map2_val}, acc ->
+      case map1[key] do
+        map1_val when map1_val == map2_val -> acc
+        _                                  -> acc |> Map.put(key, map2_val)
+      end
+    end)
   end
 end
