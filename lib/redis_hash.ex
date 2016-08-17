@@ -131,6 +131,7 @@ defmodule RedisHash do
   Push all local keys/values back to the Redis repo.
   This simply overwrites whatever is already in there.
   """
+  def push(%RedisHash{__local_changes__: []} = container), do: container
   def push(%RedisHash{__redis_key__: key, __redis_adapter__: adapter, __binary_mode__: binary, __local_changes__: changes} = container) do
     fields = changes |> Enum.reduce([], fn
       {key, value}, acc when binary -> [key, :erlang.term_to_binary(value) | acc]
