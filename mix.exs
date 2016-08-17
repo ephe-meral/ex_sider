@@ -5,6 +5,7 @@ defmodule ExSider.Mixfile do
     [app: :ex_sider,
      version: "0.1.4",
      elixir: "~> 1.2",
+     elixirc_paths: elixirc_paths(Mix.env),
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      test_coverage: [tool: Coverex.Task],
@@ -17,6 +18,9 @@ defmodule ExSider.Mixfile do
     [mod: {ExSider, []},
      applications: [:logger]]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_),     do: ["lib"]
 
   defp deps do
     [{:poolboy, "~> 1.5", only: [:dev, :test]},
