@@ -113,16 +113,33 @@ Enum.to_list(redis_set)
 # note the missing 1's because we are using a RedisSet
 ```
 
-## use case: simple local & redis cache
+## use case directly dump data into a redis hash
 
-This structure can be used to remotely cache elixir maps with simple push/pull sync semantics and no strategy for conflict resolution. The use case for this is to store (also Erlang-Node independant) the state of a process that will only ever be existing once in the cluster, but might be restarted often.
+_Note that this functionality might be made more implicit in the future by implementing the Access, Enumerable and Collectable functionality_
 
 ```elixir
-redis_hash = RedisHash.new("my-hash-name") # pulls the existing state from the repo automatically if any
-redis_hash = RedisHash.merge(redis_hash, %{"some" => :values, "that_i_want" => "to store"}) # does a local caching
-redis_hash = RedisHash.push(redis_hash) # pushes the local changes
+redis_hash = RedisHash.new("my-hash-name") # initializes the redishash with the korrekt key
+RedisHash.push(redis_hash, %{"some_value" => 123, "abc" => :abc}) # note: keys must be binaries!
+# => :ok
+RedisHash.pull(redis_hash)
+# => %{"some_value" => 123, "abc" => :abc}
+```
 
-RedisHash.unpushed_changes?(redis_hash)
+## use case: simple local & redis cache
+
+Essentially, this is a RedisHash under the hood, but caches data and changes locally.
+It can be used to remotely cache elixir maps with simple push/pull sync semantics and no strategy for conflict resolution.
+The use case for this is to store (also Erlang-Node independant) the state of a process that will only ever be existing once in the cluster, but might be restarted often.
+
+```elixir
+redis_cache = RedisCache.new("my-hash-name") # pulls the existing state from the repo automatically if any
+redis_cache = RedisCache.merge(redis_cache, %{"some" => :values, "that_i_want" => "to store"}) # does a local caching
+RedisCache.unpushed_changes?(redis_cache)
+# => true
+
+redis_cache = RedisCache.push(redis_cache) # pushes the local changes
+
+RedisCache.unpushed_changes?(redis_cache)
 # => false
 ```
 
